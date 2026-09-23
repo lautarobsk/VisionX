@@ -1,5 +1,12 @@
-opencv-python
-ultralytics
-easyocr
-jupyter
-matplotlib
+numpy==1.26.4
+opencv-python==4.8.1.78
+easyocr==1.7.2
+python-bidi==0.6.11
+PyYAML==6.0.3
+scipy==1.10.1
+scikit-image==0.21.0
+torch==2.1.0+cu118
+torchvision==0.16.0+cu118
+ultralytics==8.4.161
+matplotlib==3.10.9
+

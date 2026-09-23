@@ -1,2 +1,2 @@
 
-nuevo_alto = int(alto * proporcion)
+modelo_vehiculos = YOLO('yolov8n.pt') 
