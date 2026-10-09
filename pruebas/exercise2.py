@@ -4,11 +4,11 @@ from ultralytics import YOLO
 
 #Archivo para prueba con fotos 
 
-modelo_patentes = YOLO('yolo_patentes.pt') 
-modelo_auto = YOLO('yolov8n.pt')
+modelo_patentes = YOLO('../yolo_patentes.pt') 
+modelo_auto = YOLO('../yolov8n.pt')
 lector = easyocr.Reader(['en', 'es'])
 
-img = cv2.imread('auto.jpg')
+img = cv2.imread(r'C:\Users\lauta\OneDrive\Desktop\sandbox-vision\media\auto.jpg')
 alto, ancho = img.shape[:2]
 nuevo_ancho = 1280 
 proporcion = nuevo_ancho / ancho
@@ -33,11 +33,13 @@ if auto is not None:
             cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 255), 2)
 
 
-            patente = img[y1:y2, x1:x2]
+            auto_roi = img[y1:y2, x1:x2]
 
 
-            resultado_patente = modelo_patentes(patente)
+            resultado_patente = modelo_patentes(auto_roi)
             deteccion = resultado_patente[0].boxes
+            if len(deteccion) == 0:
+                continue
             conf = float(deteccion.conf[0])
                 
             if conf > 0.4:
@@ -50,12 +52,19 @@ if auto is not None:
 
                 cv2.rectangle(img, (px1_global, py1_global), (px2_global, py2_global), (0, 255, 255), 2)
 
+                patente = auto_roi[py1:py2, px1:px2]
+                
+                if patente.size == 0:
+                    continue
 
                 grises = cv2.cvtColor(patente, cv2.COLOR_BGR2GRAY)
                 _, bin = cv2.threshold(grises, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
                 resultado_ocr = lector.readtext(bin)
                 texto_detectado = ""
+
+                if len(resultado_ocr) == 0:
+                    continue
 
                 _, texto, conf_ocr = resultado_ocr[0]
 
@@ -67,6 +76,8 @@ if auto is not None:
                     print(f"Patente: {texto_detectado}")
                 else:
                     pass
+
+                cv2.putText(img, f'PATENTE: {texto_detectado}', (px1_global, py1_global - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
 
     
 

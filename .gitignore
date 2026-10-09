@@ -10,7 +10,7 @@ runs/
 ultralytics/runs/
 **/runs/
 **/results/
-
+*.mov
 *.jpg
 *.jpeg
 *.png
