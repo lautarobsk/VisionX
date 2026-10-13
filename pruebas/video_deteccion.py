@@ -1,16 +1,49 @@
+import os
 import cv2
 from ultralytics import YOLO
 import easyocr
 import re 
+import requests
+from datetime import datetime
 
 from utils_patentes import autocorregir_patente, GestorPatentes
 
-reader = easyocr.Reader(['en', 'es'])
-modelo_vehiculos = YOLO('../yolov8n.pt') 
-modelo_patentes = YOLO('../yolo_patentes.pt') 
-cap = cv2.VideoCapture(r'C:\Users\lauta\OneDrive\Desktop\sandbox-vision\media\Autos1.mov')
+API_URL = "http://127.0.0.1:8000/api/tracker/ingesta/"
+CAMARA_ID = "CAM-CENTRO-01"
+patentes_enviadas = set()
 
-gestor = GestorPatentes(max_votos=7)
+def enviar_al_backend(patente):
+    if patente in patentes_enviadas:
+        return
+    payload = {
+        "patente_leida": patente,
+        "codigo_camara": CAMARA_ID,
+        "timestamp": datetime.now().isoformat()
+    }
+    try:
+        res = requests.post(API_URL, json=payload, timeout=3)
+        if res.status_code == 201:
+            patentes_enviadas.add(patente)
+            print(f"[BACKEND OK] Deteccion enviada: {patente} en {CAMARA_ID}")
+            data = res.json()
+            if data.get("ALERTA SOSPECHOSO"):
+                print(f"[ALERTA] El vehiculo {patente} es sospechoso. Plan de bloqueo activado.")
+        else:
+            print(f"[BACKEND ERROR] Codigo {res.status_code}: {res.text}")
+    except requests.exceptions.RequestException:
+        print(f"[BACKEND] No se pudo conectar a {API_URL}. Compruebe que Django este iniciado.")
+
+base_dir = os.path.dirname(os.path.abspath(__file__))
+modelo_vehiculos = YOLO(os.path.join(base_dir, '..', 'yolov8n.pt')) 
+modelo_patentes = YOLO(os.path.join(base_dir, '..', 'yolo_patentes.pt')) 
+
+ruta_video = os.path.join(base_dir, '..', 'media', 'Autos1.mov')
+if not os.path.exists(ruta_video):
+    ruta_video = os.path.join(base_dir, '..', 'media', 'HAVALH6.mp4')
+
+cap = cv2.VideoCapture(ruta_video)
+
+gestor = GestorPatentes(max_votos=3)
 
 
 while cap.isOpened():
@@ -101,7 +134,8 @@ while cap.isOpened():
                                 confirmada, ganadora = gestor.registrar_lectura(id_auto, texto_detectado)
                                 
                                 if confirmada:
-                                    print(f"Auto {id_auto} CONFIRMADO: {ganadora}")
+                                    print(f"[OK] Auto {id_auto} confirmado con patente: {ganadora}")
+                                    enviar_al_backend(ganadora)
                                 else:
                                     progreso = gestor.obtener_progreso(id_auto)
                                     print(f"ID {id_auto} {progreso}/{gestor.max_votos}: {texto_detectado} (Confianza OCR: {ultima_conf_ocr_valida:.2f})")
