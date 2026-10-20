@@ -33,13 +33,13 @@ def enviar_al_backend(patente):
     except requests.exceptions.RequestException:
         print(f"[BACKEND] No se pudo conectar a {API_URL}. Compruebe que Django este iniciado.")
 
-base_dir = os.path.dirname(os.path.abspath(__file__))
-modelo_vehiculos = YOLO(os.path.join(base_dir, '..', 'yolov8n.pt')) 
-modelo_patentes = YOLO(os.path.join(base_dir, '..', 'yolo_patentes.pt')) 
+reader = easyocr.Reader(['en', 'es'])
+modelo_vehiculos = YOLO('../yolov8n.pt') 
+modelo_patentes = YOLO('../yolo_patentes.pt') 
 
-ruta_video = os.path.join(base_dir, '..', 'media', 'Autos1.mov')
+ruta_video = r'C:\Users\lauta\OneDrive\Desktop\sandbox-vision\media\Autos1.mov'
 if not os.path.exists(ruta_video):
-    ruta_video = os.path.join(base_dir, '..', 'media', 'HAVALH6.mp4')
+    ruta_video = r'C:\Users\lauta\OneDrive\Desktop\sandbox-vision\media\HAVALH6.mp4'
 
 cap = cv2.VideoCapture(ruta_video)
 

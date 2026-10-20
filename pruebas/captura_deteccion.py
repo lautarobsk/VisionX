@@ -1,6 +1,7 @@
 import cv2
 import easyocr
 from ultralytics import YOLO
+from utils_patentes import autocorregir_patente
 
 #Archivo para prueba con fotos 
 
@@ -8,7 +9,7 @@ modelo_patentes = YOLO('../yolo_patentes.pt')
 modelo_auto = YOLO('../yolov8n.pt')
 lector = easyocr.Reader(['en', 'es'])
 
-img = cv2.imread(r'C:\Users\lauta\OneDrive\Desktop\sandbox-vision\media\auto.jpg')
+img = cv2.imread(r'C:\\Users\\lauta\\OneDrive\\Desktop\\sandbox-vision\\media\\auto.jpg')
 alto, ancho = img.shape[:2]
 nuevo_ancho = 1280 
 proporcion = nuevo_ancho / ancho
@@ -32,9 +33,7 @@ if auto is not None:
 
             cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 255), 2)
 
-
             auto_roi = img[y1:y2, x1:x2]
-
 
             resultado_patente = modelo_patentes(auto_roi)
             deteccion = resultado_patente[0].boxes
@@ -57,10 +56,17 @@ if auto is not None:
                 if patente.size == 0:
                     continue
 
+                patente = cv2.resize(patente, (0, 0), fx=3.0, fy=3.0, interpolation=cv2.INTER_CUBIC)
                 grises = cv2.cvtColor(patente, cv2.COLOR_BGR2GRAY)
-                _, bin = cv2.threshold(grises, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                blur = cv2.GaussianBlur(grises, (5, 5), 0)
+                _, binaria = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
-                resultado_ocr = lector.readtext(bin)
+                # Intentar primero con imagen normal, si falla probar invertida
+                for imagen_ocr in [binaria, cv2.bitwise_not(binaria)]:
+                    resultado_ocr = lector.readtext(imagen_ocr, allowlist='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
+                    if resultado_ocr:
+                        break
+
                 texto_detectado = ""
 
                 if len(resultado_ocr) == 0:
@@ -68,14 +74,14 @@ if auto is not None:
 
                 _, texto, conf_ocr = resultado_ocr[0]
 
-                if conf_ocr > 0.4:
+                if conf_ocr > 0.3:
                     texto_limpio = texto.replace(" ", "").upper()
                     texto_detectado += texto_limpio
 
+                texto_detectado = autocorregir_patente(texto_detectado)
+
                 if len(texto_detectado) >= 6:
                     print(f"Patente: {texto_detectado}")
-                else:
-                    pass
 
                 cv2.putText(img, f'PATENTE: {texto_detectado}', (px1_global, py1_global - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
 
@@ -84,6 +90,3 @@ if auto is not None:
 cv2.imshow('Sistema ALPR', img)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
-
-
-    
